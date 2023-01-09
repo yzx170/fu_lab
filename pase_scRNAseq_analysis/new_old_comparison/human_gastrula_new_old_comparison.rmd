@@ -1,0 +1,281 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+library(dplyr)
+```
+
+```{r}
+# Enable parallelization
+library(future)
+plan("multiprocess", workers = 8)
+options(future.globals.maxSize = 2000 * 1024^2)
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd("G:/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+old <- readRDS("GSE134571_Posterior48h_H9_Amnion_Merged_updated.rds")
+new <- readRDS(
+"allsamples_humanGastrula_PCA_dims20_findneighbor_dim15_res0.57_CCS_update.rds")
+setwd(current)
+```
+
+```{r}
+# Create list containing new and old 48 h
+# Split old
+old_list <- SplitObject(old, split.by = "old.ident")
+old_48 <- old_list[["10X_Embryoid"]]
+# Split new
+new_list <- SplitObject(new, split.by = "orig.ident")
+new_48 <- new_list[["hESC_48h"]]
+# Combine new and old
+combined_48 <- list("old_48" = old_48, "new_48" = new_48)
+```
+
+```{r}
+# Integration
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = combined_48)
+anchors <- FindIntegrationAnchors(object.list = combined_48,
+anchor.features = features)
+integrated_48 <- IntegrateData(anchorset = anchors)
+```
+
+
+```{r}
+# Seperate new v. old
+# Extract old.ident to a vector
+batchname <- integrated_48$old.ident
+# Rename
+batchname <- gsub("10X_Embryoid", "old", batchname)
+batchname <- gsub("hESC_48h", "new", batchname)
+# Paste back to create a new metadata called batch
+integrated_48$batch <- batchname
+```
+
+```{r}
+# Integrated Analysis
+DefaultAssay(integrated_48) <- "integrated"
+integrated_48 <- ScaleData(integrated_48, verbose = FALSE)
+integrated_48 <- RunPCA(integrated_48, npcs = 20, verbose = FALSE)
+integrated_48 <- RunUMAP(integrated_48, reduction = "pca", dims = 1:20,
+return.model = TRUE)
+```
+
+```{r}
+# Integrated Clustering
+integrated_48 <- FindNeighbors(integrated_48, reduction = "pca", dims = 1:20)
+integrated_48 <- FindClusters(integrated_48, resolution = 0.2)
+# Label Clusters
+integrated_48 <- RenameIdents(integrated_48,
+`0` = "Meso_2", `1` = "PGC",
+`2` = "Meso_1", `3` = "AM")
+```
+
+```{r}
+# Visualization
+DimPlot(integrated_48, reduction = "umap", group.by = "batch", label = FALSE)
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+current <- getwd()
+setwd("G:/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+saveRDS(integrated_48, file = "new_old_48h_integrated.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+current <- getwd()
+setwd("G:/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+integrated_48 <- readRDS("new_old_48h_integrated.rds")
+setwd(current)
+```
+
+```{r}
+# New Old UMAP
+new_old_umap <-
+DimPlot(integrated_48, reduction = "umap", group.by = "batch", label = FALSE)
+```
+
+```{r}
+# Plot modification
+# Modify elements
+new_old_umap <- new_old_umap + theme(
+axis.text = element_text(size = 6, face = NULL),
+axis.title.x.bottom = element_text(size = 6, face = NULL),
+axis.title.y.left = element_text(size = 6, face = NULL),
+axis.ticks = element_line(size = 0.4),
+axis.line = element_line(size = 0.4),
+legend.text = element_text(size = 6),
+legend.position = c(0.8, 0.2), # specify position of legends as a vector
+plot.title = element_blank())
+
+# Change dot size and stroke in mm
+new_old_umap$layers[[1]]$aes_params$size <- 0.3
+new_old_umap$layers[[1]]$aes_params$stroke <- 0
+
+# Make entire plot more compact
+new_old_umap <- new_old_umap + theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+new_old_umap # preview
+```
+
+```{r}
+# Export, size in inches
+pdf(file = "new_old_UMAP.pdf", width = 2.5, height = 2.5)
+new_old_umap
+dev.off()
+```
+
+```{r}
+# Cluster UMAP
+cluster_umap <-
+DimPlot(integrated_48, reduction = "umap", label = TRUE,
+label.size = 2) + NoLegend()
+```
+
+```{r}
+# Plot modification
+# Modify elements
+cluster_umap <- cluster_umap + theme(
+axis.text = element_text(size = 6, face = NULL),
+axis.title.x.bottom = element_text(size = 6, face = NULL),
+axis.title.y.left = element_text(size = 6, face = NULL),
+axis.ticks = element_line(size = 0.4),
+axis.line = element_line(size = 0.4),
+plot.title = element_blank())
+
+# Change dot size and stroke in mm
+cluster_umap$layers[[1]]$aes_params$size <- 0.3
+cluster_umap$layers[[1]]$aes_params$stroke <- 0
+
+# Make entire plot more compact
+cluster_umap <- cluster_umap + theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+cluster_umap # preview
+```
+
+```{r}
+# Export, size in inches
+pdf(file = "cluster_UMAP.pdf", width = 2.5, height = 2.5)
+cluster_umap
+dev.off()
+```
+
+```{r}
+# Dot plots
+Idents(integrated_48) <- factor(Idents(integrated_48),
+levels = c("Meso_2", "Meso_1", "AM", "PGC"))
+markers_to_plot <- c("NANOG", "SOX2", "POU5F1", "TBXT", "MIXL1", "MESP1",
+"EOMES", "GATA6", "APLNR", "LHX1", "PITX2", "PDGFRA",  "HEY1", "ISL1",
+"TFAP2A", "GATA3", "ANXA3", "TCIM", "GABRP", "SOX17", "TFAP2C")
+dot_plot <- DotPlot(integrated_48, cols = c("darkblue", "darkblue"),
+features = markers_to_plot, dot.scale = 5,
+split.by = "batch") + RotatedAxis()
+```
+
+```{r}
+# Plot modification
+# Modify elements
+dot_plot <- dot_plot + theme(
+axis.text = element_text(size = 6, face = NULL),
+axis.ticks = element_line(size = 0.4),
+axis.line = element_line(size = 0.4),
+legend.text = element_text(size = 6),
+legend.title = element_blank(),
+plot.title = element_blank())
+
+# Remove axis labels
+dot_plot <- dot_plot + xlab(NULL) + ylab(NULL)
+
+# Make entire plot more compact
+dot_plot <- dot_plot + theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+dot_plot # preview
+```
+
+```{r}
+# Export, size in inches
+pdf(file = "dot_plot.pdf", width = 6, height = 2.5)
+dot_plot
+dev.off()
+```
+
+
+
+
+
+```{r}
+# New section
+#DotPlot
+
+features <- c("NANOG", "SOX2", "POU5F1", "TBXT", "MIXL1", "MESP1",
+"EOMES", "GATA6", "APLNR", "LHX1", "PDGFRA", "CDX2",
+"PITX2", "HOXB6", "HEY1", "ISL1", "TFAP2A", "GATA3", "ANXA3",
+"TCIM", "GABRP", "SOX17", "TFAP2C", "NANOS3.1")
+
+new_dotplot <- DotPlot(integrated_48, features = features, assay = "RNA",
+cols = c("darkblue", "darkblue"), split.by = "batch") + RotatedAxis()
+
+# Modify plot
+levels(new_dotplot$data$features.plot)[
+levels(new_dotplot$data$features.plot) == "NANOS3.1"] <- "NANOS3"
+
+pdf(file = "dotplot.pdf", width = 9, height = 3)
+new_dotplot
+dev.off()
+```
+
+
+
+
+
+
+```{r}
+current <- getwd()
+setwd("G:/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+load("allsamples_PCA_cluster_dims20_res0.5.Rd")
+unintegrated_new <- allsamples_PCA_cluster_dims20_res0.5
+load("allsamples_humanGastrula_PCA_dims20_findneighbor_dim15_res0.57_CCS.Rd")
+integrated_new <- allsamples_humanGastrula_PCA_dims20_findneighbor_dim15_res0.57
+setwd(current)
+```
+
+
+```{r}
+features <- c("NANOG","SOX2","POU5F1","TBXT","MIXL1","MESP1",
+"EOMES","GATA6","APLNR","LHX1","PDGFRA","CDX2",
+"PITX2","HOXB6","HEY1","ISL1","TFAP2A","GATA3","ANXA3",
+"TCIM","GABRP","SOX17","TFAP2C","NANOS3")
+pdf(file = "integrated_new_updated.pdf", width = 9, height = 3)
+DotPlot(new, features = features, assay = "RNA", group.by = "seurat_clusters") + RotatedAxis()
+dev.off()
+```
+
+
+```{r}
+DotPlot(integrated_new, features = c("NANOS3"), assay = "RNA",
+group.by = "seurat_clusters") + RotatedAxis()
+```
+
+
+
+
+
+```{r}
+```
