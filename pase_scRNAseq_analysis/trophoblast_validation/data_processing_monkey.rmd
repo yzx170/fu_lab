@@ -1,0 +1,94 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Monkey"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+data <- readRDS("data.integrated.RPCA.WT.full.EPI_labeled.rds")
+source("additional_functions_200606.R")
+setwd(current)
+```
+
+```{r}
+## use the celltypes_EPI as idents
+Idents(data[["WT_d14"]]) <- data[["WT_d14"]]@meta.data$celltypes_EPI
+# Extract only Day 14 data
+data_day14 <- data[["WT_d14"]]
+table(data_day14@active.ident)
+UpdateSeuratObject(data_day14)
+DefaultAssay(data_day14) <- "RNA"
+```
+
+```{r}
+# Extract AM clusters
+amnion <- subset(data_day14, idents = c("late-Amnion"))
+
+# Translate into human ID
+setwd(data_dir)
+translated_genenames <- id_translate(rownames(amnion))
+setwd(current)
+```
+
+```{r}
+# Unit conversion
+amnion <- NormalizeData(amnion, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+amnion <- GetAssayData(object = amnion[["RNA"]], slot = "data")
+# Replace row names with translated gene names
+rownames(amnion) <- translated_genenames
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(amnion, file = "Monkey_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Monkey_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(amnion[genes_to_query, ])
+```
+
+
+
+```{r}
+```

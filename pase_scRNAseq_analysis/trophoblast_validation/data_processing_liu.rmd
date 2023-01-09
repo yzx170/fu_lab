@@ -1,0 +1,138 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+library(readxl)
+```
+
+```{r}
+# Enable parallelization
+library(future)
+plan("multiprocess", workers = 4)
+options(future.globals.maxSize = 1000 * 1024^2)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Liu"
+current <- getwd()
+```
+
+```{r}
+# Data Import (both RAW and processed meta)
+setwd(data_dir)
+data_matrix <- Read10X("../Liu/GSE156596_RAW")
+metadata <- read_excel("../Liu/Cell Identity.xlsx")
+setwd(current)
+data <- CreateSeuratObject(counts = data_matrix,
+project = "Liu")
+```
+
+```{r}
+# Merging metadata
+meta <- as.data.frame(metadata)
+row.names(meta) <- meta$...1 # label meta with cell names
+meta$...1 <- NULL
+
+# Identify Cells selected in Manuscript
+data <- AddMetaData(data, meta["orig.ident"], col.name = "Processed")
+data <- subset(data, subset = Processed == "iBlastoids") # discard rest
+
+# Add useful metadata
+data <- AddMetaData(data, meta["celltype"], col.name = "Cluster")
+```
+
+```{r}
+# Normalization and Scaling
+data <- SCTransform(data)
+```
+
+```{r}
+# Dimension Reduction
+data <- RunPCA(data, features = VariableFeatures(object = data))
+data <- RunUMAP(data, dims = 1:20)
+```
+
+```{r}
+# Visualization
+DimPlot(data, reduction = "umap", group.by = "Cluster")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Liu_processed.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Liu_processed.rds")
+setwd(current)
+```
+
+```{r}
+# Object containing only TE
+clustered <- SplitObject(data, split.by = "Cluster")
+trophectoderm <- clustered[["TE_iBlastoids"]]
+```
+
+```{r}
+# Unit conversion
+trophectoderm <- NormalizeData(trophectoderm, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+trophectoderm <- GetAssayData(object = trophectoderm[["RNA"]], slot = "data")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(trophectoderm, file = "Liu_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+trophetcoderm <- readRDS("Liu_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(trophetcoderm[genes_to_query, ])
+```
+
+
+
+```{r}
+```

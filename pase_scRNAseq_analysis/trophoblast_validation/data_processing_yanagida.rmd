@@ -1,0 +1,93 @@
+```{r}
+# Necessary libraries
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Yanagida"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+count_matrix <-
+read.table("../Yanagida/GSE171820_Counts_raw.txt",
+header = TRUE)
+meta <- read.csv("../Yanagida/GSE171820_Sample_Assignments.csv")
+setwd(current)
+```
+
+```{r}
+# Extract the name of trophectoderm cells from blastoid
+meta_tropho <- subset(meta, Lineage == "Trophectoderm" & Origin == "Blastoid")
+
+# Subset count matrix to only blastoid trophectoderm
+data <- count_matrix[, colnames(count_matrix) %in% meta_tropho$Name]
+data <- cbind(count_matrix[, 1:2], data) # retain exon length info
+
+# Unit conversion to CPM
+for (batch in meta_tropho$Name) {
+rate <-
+data[, batch] / data[, "Length"] # count per base
+data[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+
+# Average all cells
+data$averaged <- rowMeans(data[, -c(1, 2)])
+data <- data[, c("gene_name", "averaged")]
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Yanagida_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Yanagida_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+```
+
+
+
+
+
+
+
+
+```{r}
+```

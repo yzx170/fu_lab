@@ -1,0 +1,109 @@
+```{r}
+# Necessary libraries
+library("readxl")
+```
+
+```{r}
+# Master Directory
+if (Sys.info()["sysname"] == "Windows") {
+google_drive <- "G:"
+} else if (Sys.info()["sysname"] == "Darwin") {
+google_drive <-
+"/Users/robinyan/Library/CloudStorage/GoogleDrive-robinyzx@umich.edu"
+}
+
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Dong")
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data_1 <- read.table(file.path(data_dir,
+"GSE138688_counts_table.txt"), header = TRUE)
+data_2 <- as.data.frame(read_excel(file.path(data_dir,
+"GSE138688_fCounts2.xlsx")))
+
+setwd(current)
+```
+
+```{r}
+# Merge two runs
+data <- merge(data_1, data_2)
+
+# Extract count data
+count <- data[, c(3, 4, 6, 8, 10, 14, 17, 19, 22)]
+
+# Average repeated runs
+count[, 3] <- rowMeans((count[, c(3, 8)]))
+count[, 6] <- rowMeans((count[, c(6, 9)]))
+count <- count[, -c(8, 9)]
+
+# Gene length
+gene_length <- data[, 1:2]
+
+# Batch names
+batch_names <- colnames(count)
+
+# Unit conversion to TPM
+normalized_count <- count
+for (batch in batch_names) {
+rate <-
+count[, batch] / gene_length[, "length"] # count per base
+
+normalized_count[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+
+# Final Data
+normalized_count <- cbind(gene_length[, 1], normalized_count[, 1:7])
+colnames(normalized_count)[1] <- "gene_name"
+
+
+data <- normalized_count
+
+# # final data
+# data <- data[, append(te_batch, c("gene_name", "exons_size"))]
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Dong_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Dong_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+test <- sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+
+test <- data.matrix(test)
+```
+
+```{r}
+```

@@ -1,0 +1,73 @@
+```{r}
+# Necessary libraries
+library(stringr)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Yu"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data <- read.csv("../Yu/matrix_cpm_avg_LW60_LW61.csv.gz", header = TRUE)
+ref <- read.table(
+"../Conversion Reference/Homo_sapiens.GRCh38.102.gtf.exonsSizePerGene.txt",
+header = TRUE)
+setwd(current)
+```
+
+```{r}
+# Add labels
+labels <- data$feature
+labels <- str_trunc(labels, 15, "right", "")
+data[, "feature"] <- labels
+
+# Merge with reference genome
+data <- merge(data, ref, by.x = "feature", by.y = "gene_id")
+
+# Extract TE clusters
+data <- data[, c("gene_name", "X0", "X1", "X8", "X9", "X12", "X17")]
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Yu_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Yu_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+```
+
+```{r}
+```

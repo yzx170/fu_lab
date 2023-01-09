@@ -1,0 +1,96 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+library(readxl)
+```
+
+```{r}
+# Enable parallelization
+library(future)
+plan("multiprocess", workers = 4)
+options(future.globals.maxSize = 1000 * 1024^2)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Petropoulos"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data_matrix <- read.table("../Petropoulos/rpkm.txt")
+meta <- read_excel("../Petropoulos/meta.xlsx")
+setwd(current)
+```
+
+```{r}
+# Create Seurat object
+data <- CreateSeuratObject(counts = data_matrix,
+project = "Petropoulos")
+```
+
+```{r}
+# Merging metadata
+meta <- as.data.frame(meta)
+row.names(meta) <- meta$Cell # label meta with cell names
+meta[["Cell"]] <- NULL
+
+# Identify Cells selected in Manuscript
+data <- AddMetaData(data, meta, col.name = "Cluster")
+data <- subset(data, subset = Cluster == "trophectoderm") # discard rest
+```
+
+```{r}
+# Unit conversion
+data <- NormalizeData(data, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+data <- GetAssayData(object = data[["RNA"]], slot = "data")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Petropoulos_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Petropoulos_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(data[genes_to_query, ])
+```
+
+
+
+```{r}
+```

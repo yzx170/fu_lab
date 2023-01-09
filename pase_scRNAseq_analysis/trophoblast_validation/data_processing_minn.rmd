@@ -1,0 +1,181 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Enable parallelization
+library(future)
+plan("multiprocess", workers = 8)
+options(future.globals.maxSize = 2000 * 1024^2)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Minn"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+gastruloid_1 <- Read10X("../Minn/GSE144897_RAW/GSM4300502")
+gastruloid_2 <- Read10X("../Minn/GSE144897_RAW/GSM4300503")
+setwd(current)
+data_1 <- CreateSeuratObject(counts = gastruloid_1,
+project = "Minn_1", min.cells = 3, min.features = 200)
+data_2 <- CreateSeuratObject(counts = gastruloid_2,
+project = "Minn_2", min.cells = 3, min.features = 200)
+```
+
+```{r}
+# Quality Control and combine
+data_1[["percent.mt"]] <- PercentageFeatureSet(data_1, pattern = "^MT-")
+data_1 <- subset(data_1, subset = nFeature_RNA > 200 &
+nFeature_RNA < 7500 & percent.mt < 3)
+data_2[["percent.mt"]] <- PercentageFeatureSet(data_2, pattern = "^MT-")
+data_2 <- subset(data_2, subset = nFeature_RNA > 200 &
+nFeature_RNA < 6000 & percent.mt < 2.5)
+combined <- list("gastruloid_1" = data_1, "gastruloid_2" = data_2)
+```
+
+```{r}
+# Normalization and Feature Selection
+combined <- lapply(X = combined, FUN = function(x) {
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x)
+})
+```
+
+```{r}
+# Integration
+features <- SelectIntegrationFeatures(object.list = combined)
+anchors <- FindIntegrationAnchors(object.list = combined,
+anchor.features = features)
+integrated <- IntegrateData(anchorset = anchors)
+```
+
+```{r}
+# Integrated Analysis
+DefaultAssay(integrated) <- "integrated"
+integrated <- ScaleData(integrated)
+integrated <- RunPCA(integrated)
+integrated <- RunUMAP(integrated, reduction = "pca", dims = 1:15)
+```
+
+```{r}
+# Integrated Clustering
+integrated <- FindNeighbors(integrated)
+integrated <- FindClusters(integrated, resolution = 0.4)
+```
+
+```{r}
+# Dot plots
+markers_to_plot <- c("CDX2", "GATA3", "KRT7", "GATA2", "TBX3", "TFAP2A",
+"HAND1", "WNT6")
+DotPlot(integrated, cols = c("darkblue", "darkblue"),
+features = markers_to_plot, dot.scale = 5,
+split.by = "orig.ident") + RotatedAxis()
+```
+
+```{r}
+# Visualization
+DimPlot(integrated, reduction = "umap")
+```
+
+```{r}
+# Label Clusters
+integrated <- RenameIdents(integrated,
+`4` = "ExE-like")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(integrated, file = "Minn_processed.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+integrated <- readRDS("Minn_processed.rds")
+setwd(current)
+```
+
+```{r}
+# Extract object containing only TE (two batches)
+integrated[["active.ident"]] <- integrated@active.ident
+clustered <- SplitObject(integrated, split.by = "active.ident")
+trophectoderm <- clustered[["ExE-like"]]
+# Split obejct into two batches
+batches <- SplitObject(trophectoderm, split.by = "orig.ident")
+```
+
+```{r}
+batches <- lapply(X = batches, FUN = function(x) {
+    # Unit conversion
+    x <- NormalizeData(x, assay = "RNA",
+    normalization.method = "RC", scale.factor = 1e6)
+    # Extract converted assay
+    x <- GetAssayData(object = x[["RNA"]], slot = "data")
+})
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(batches, file = "Minn_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+batches <- readRDS("Minn_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"DPPA3",
+"S100A14",
+"ISL1",
+"HEY1")
+lapply(X = batches, FUN = function(x) {
+    rowMeans(x[genes_to_query, ])
+})
+```
+
+
+
+
+
+
+
+
+```{r}
+```

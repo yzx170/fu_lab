@@ -1,0 +1,132 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+library(httpgd)
+# Prepare for Cell Cycle Regression
+s_genes <- cc.genes$s.genes
+g2m_genes <- cc.genes$g2m.genes
+```
+
+```{r}
+# Data Import
+codedir <- getwd()
+if (Sys.info()["sysname"] == "Windows") {
+google_drive <- "G:"
+} else if (Sys.info()["sysname"] == "Darwin") {
+google_drive <-
+"/Users/robinyan/Library/CloudStorage/GoogleDrive-robinyzx@umich.edu"
+}
+masterdir <- file.path(google_drive,
+"My Drive/Projects/Yi's scRNA Data/External Papers/Rostovskaya",
+"GSE179309_RAW")
+
+# New metadata
+meta_ap8 <- read.table(file.path(masterdir, "AP8",
+"AP8.cell.annotation.txt"), header = TRUE)
+```
+
+```{r}
+currentdir <- file.path(masterdir, "AP8")
+# Seurat Standard Workflow - 0h
+raw_10x <- Read10X(data.dir = currentdir)
+data <- CreateSeuratObject(counts = raw_10x)
+
+# Modify new metadata so row names are cell names
+rownames(meta_ap8) <- meta_ap8$sample
+meta_ap8$sample <- NULL
+
+# Add metadata back to Seurat object
+data <- AddMetaData(data, meta_ap8)
+
+
+# # This is to check merge results based on two common metadata
+# colnames(meta_ap8)[1] <- "nCount_RNA_from_meta"
+# colnames(meta_ap8)[2] <- "nFeature_RNA_from_meta"
+# data <- AddMetaData(data, meta_ap8)
+# data[["nCount_RNA"]] - data$nCount_RNA_from_meta
+# data[["nFeature_RNA"]] - data$nFeature_RNA_from_meta
+
+
+# # Pre-processing
+# data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = "^MT-")
+# # Generate ridgeplot to determine filtering threshold
+# RidgePlot(data, features = "nFeature_RNA") +
+# scale_x_continuous(breaks = seq(0, 10000, 500))
+# RidgePlot(data, features = "percent.mt") +
+# scale_x_continuous(breaks = seq(0, 100, 1))
+# # Filter cells
+# data <- subset(data, subset =
+# nFeature_RNA > 250 & nFeature_RNA < 5500 &
+# percent.mt < 15 & percent.mt > 1)
+
+# Subset object based on new meta data
+Idents(object = data) <- "Cell.Type"
+data <- subset(data, idents = c("AME-L-like", "STB-like"))
+
+# Seurat work flow and unit conversion
+data <- NormalizeData(data, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+
+# Extract converted assay
+data <- GetAssayData(object = data[["RNA"]], slot = "data")
+
+
+
+
+# # Verify cutoff
+# VlnPlot(data, features = c("nFeature_RNA", "percent.mt"), ncol = 3)
+# # hist(data$nFeature_RNA, breaks = seq(0, 12000, 100))
+
+# # Cell Cycle Score
+# data <- CellCycleScoring(data, s.features = s_genes,
+# g2m.features = g2m_genes, set.ident = TRUE)
+# data[["CC.Difference"]] <- data$S.Score - data$G2M.Score
+
+
+# # Cluster data
+# data <- ScaleData(data,
+# vars.to.regress = "CC.Difference")
+# data <- RunPCA(object = data)
+# data <- FindNeighbors(object = data)
+
+# data <- FindClusters(object = data, resolution = .03)
+# data <- RunTSNE(object = data)
+# data <- RunUMAP(object = data, reduction = "pca", dims = 1:20)
+```
+
+```{r}
+# Save processed data
+setwd(currentdir)
+saveRDS(data, file = "rostovskaya_ap8.rds")
+setwd(codedir)
+```
+
+
+
+
+
+```{r}
+# Read processed data
+setwd(currentdir)
+data <- readRDS("rostovskaya_ap8.rds")
+setwd(codedir)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(data[genes_to_query, ])
+```
+

@@ -1,0 +1,108 @@
+```{r}
+# Necessary libraries
+library("readxl")
+```
+
+```{r}
+# Master Directory
+if (Sys.info()["sysname"] == "Windows") {
+google_drive <- "G:"
+} else if (Sys.info()["sysname"] == "Darwin") {
+google_drive <-
+"/Users/robinyan/Library/CloudStorage/GoogleDrive-robinyzx@umich.edu"
+}
+
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Rostovskaya")
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data <- read_excel(file.path(data_dir,
+"GSE179309_hALEC_RNAseq_samples_raw_counts.xlsx"))
+setwd(current)
+```
+
+```{r}
+# Extract count data
+count <- data[, 15:20]
+
+# Gene length
+gene_length <- data[, 1:4]
+gene_length[, 2] <- gene_length[, 4] - gene_length[, 3]
+# using "Chromosome" column as gene length
+
+# Average repeated runs
+count[, 1] <- rowMeans((count[, c(1, 2)]))
+count[, 3] <- rowMeans((count[, c(3, 4)]))
+count[, 5] <- rowMeans((count[, c(5, 6)]))
+count <- count[, c(1, 3, 5)]
+colnames(count) <- c("hALEC Day 1", "hALEC Day 3", "hALEC Day 5")
+count <- data.frame(count)
+
+# Batch names
+batch_names <- colnames(count)
+
+# Unit conversion to TPM
+normalized_count <- count
+for (batch in batch_names) {
+rate <-
+count[, batch] / gene_length[, "Chromosome"] # count per base
+
+normalized_count[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+
+# Final Data
+normalized_count <- cbind(gene_length[, 1], normalized_count[, 1:3])
+colnames(normalized_count)[1] <- "gene_name"
+
+
+data <- normalized_count
+
+# # final data
+# data <- data[, append(te_batch, c("gene_name", "exons_size"))]
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Rostovskaya_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Rostovskaya_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+test <- sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+
+test <- data.matrix(test)
+```
+
+```{r}
+```

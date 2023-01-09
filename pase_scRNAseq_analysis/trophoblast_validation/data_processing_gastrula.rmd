@@ -1,0 +1,78 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Human gastrula"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+load(
+"human_gastrula.Rd")
+data <- allsamples_PCA_dims20_findneighbor_dim20_res0.5
+setwd(current)
+```
+
+```{r}
+# Extract AM clusters
+data <- subset(data, subset = orig.ident == "ectoderm")
+```
+
+```{r}
+# Unit conversion
+data <- NormalizeData(data, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+data <- GetAssayData(object = data[["RNA"]], slot = "data")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "gastrula_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("gastrula_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(data[genes_to_query, ])
+```
+
+
+
+```{r}
+```

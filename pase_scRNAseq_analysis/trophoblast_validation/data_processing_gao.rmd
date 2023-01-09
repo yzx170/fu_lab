@@ -1,0 +1,57 @@
+```{r}
+# Necessary libraries
+library("readxl")
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Gao"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data <- read_excel("../Gao/edited.xlsx")
+setwd(current)
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Gao_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Gao_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = Name == x)
+})
+```
+
+```{r}
+```

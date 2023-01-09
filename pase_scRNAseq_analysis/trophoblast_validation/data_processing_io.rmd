@@ -1,0 +1,75 @@
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Io"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data <- read.table("../Io/GSE144994_gene_counts.tsv.gz", header = TRUE)
+ref <- read.table(
+"../Conversion Reference/Homo_sapiens.GRCh38.102.gtf.exonsSizePerGene.txt",
+header = TRUE)
+setwd(current)
+```
+
+```{r}
+# Merge with reference genome
+data <- merge(data, ref, by.x = "gene", by.y = "gene_name")
+
+# Extract TE clusters
+te_batch <- c("X02_N_D1_Ex1", "X02_N_D1_Ex2",
+"X03_N_D2_Ex1", "X03_N_D2_Ex2", "X04_N_D3_Ex1", "X04_N_D3_Ex2")
+data <- data[, append(te_batch, c("gene", "exons_size"))]
+```
+
+```{r}
+# Unit conversion to TPM
+for (batch in te_batch) {
+rate <-
+data[, batch] / data[, "exons_size"] # count per base
+data[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Io_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Io_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene == x)
+})
+```
+
+```{r}
+```

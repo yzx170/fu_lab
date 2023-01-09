@@ -1,0 +1,96 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/Data/Processed"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+load("allsamples_PCA_cluster_dims20_res0.5.Rd")
+data <- allsamples_PCA_cluster_dims20_res0.5
+old <- readRDS("GSE134571_Posterior48h_H9_Amnion_Merged.rds")
+setwd(current)
+```
+
+```{r}
+# Extract AM clusters
+data$cluster <- data@active.ident
+amnion_1 <- subset(data, subset = cluster == c("AMLC1"))
+amnion_2 <- subset(data, subset = cluster == c("AMLC2"))
+old$cluster <- old@active.ident
+old <- subset(old, subset = cluster == 0)
+```
+
+```{r}
+# Unit conversion
+amnion_1 <- NormalizeData(amnion_1, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+amnion_1 <- GetAssayData(object = amnion_1[["RNA"]], slot = "data")
+
+# Unit conversion
+amnion_2 <- NormalizeData(amnion_2, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+amnion_2 <- GetAssayData(object = amnion_2[["RNA"]], slot = "data")
+
+# Unit conversion
+old <- NormalizeData(old, assay = "RNA",
+normalization.method = "RC", scale.factor = 1e6)
+# Extract converted assay
+old <- GetAssayData(object = old[["RNA"]], slot = "data")
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(amnion_1, file = "Zheng_1_final.rds")
+saveRDS(amnion_2, file = "Zheng_2_final.rds")
+saveRDS(old, file = "Zheng_final_transwell.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Zheng_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+rowMeans(data[genes_to_query, ])
+```
+
+
+
+```{r}
+```

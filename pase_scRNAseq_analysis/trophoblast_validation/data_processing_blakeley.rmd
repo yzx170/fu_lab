@@ -1,0 +1,104 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Enable parallelization
+library(future)
+plan("multiprocess", workers = 4)
+options(future.globals.maxSize = 1000 * 1024^2)
+```
+
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Blakeley"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+current <- getwd()
+setwd(data_dir)
+count_matrix <-
+read.table("../Blakeley/GSE66507_human_blastocyst_rnaseq_counts.txt",
+header = TRUE)
+ref <- read.table(
+"../Conversion Reference/Homo_sapiens.GRCh38.102.gtf.exonsSizePerGene.txt",
+header = TRUE)
+setwd(current)
+```
+
+```{r}
+# Merge with reference genome
+data <- merge(count_matrix, ref, by.x = "Gene", by.y = "gene_id")
+data[, "Gene"] <- NULL
+
+# Extract TE clusters
+te_batch <- colnames(data)[grep("^TE", colnames(data))]
+data <- data[, append(te_batch, c("gene_name", "exons_size"))]
+
+# Unit conversion to CPM
+for (batch in te_batch) {
+rate <-
+data[, batch] / data[, "exons_size"] # count per base
+data[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+
+# Average all cells
+data$te <- rowMeans(data[, -c(17, 18)])
+data <- data[, c(17, 18, 19)]
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Blakeley_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Blakeley_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+```
+
+
+
+
+
+
+
+
+```{r}
+```

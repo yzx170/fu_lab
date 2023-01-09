@@ -1,0 +1,74 @@
+```{r}
+# Master Directory
+data_dir <-
+"G:/My Drive/Projects/Yi's scRNA Data/External Papers/Guo"
+current <- getwd()
+```
+
+```{r}
+# Data Import
+setwd(data_dir)
+data <- read.table("../Guo/GSE166401_counts.txt", header = TRUE)
+ref <- read.table(
+"../Conversion Reference/Homo_sapiens.GRCh38.102.gtf.exonsSizePerGene.txt",
+header = TRUE)
+setwd(current)
+```
+
+```{r}
+# Extract TE clusters
+te_batch <- colnames(data)[2:length(colnames(data))]
+# Merge with reference genome
+data <- merge(data, ref, by.x = "ID", by.y = "gene_id")
+# Remove unused columns
+data <- data[, append(te_batch, c("gene_name", "exons_size"))]
+```
+
+```{r}
+# Unit conversion to TPM
+for (batch in te_batch) {
+rate <-
+data[, batch] / data[, "exons_size"] # count per base
+data[, batch] <-
+rate / sum(rate) * 1e6 # divide by sum of all rates, multiply by 1e6
+}
+```
+
+```{r}
+# Save data file processed thus far to .RDS
+setwd(data_dir)
+saveRDS(data, file = "Guo_final.rds")
+setwd(current)
+```
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+setwd(data_dir)
+data <- readRDS("Guo_final.rds")
+setwd(current)
+```
+
+```{r}
+# Query
+genes_to_query <- c("DNMT3L",
+"KHDC1L",
+"GCM1",
+"DPPA3",
+"S100A14",
+"HAVCR1",
+"ISL1",
+"HEY1")
+sapply(X = genes_to_query, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+```
+
+```{r}
+```
