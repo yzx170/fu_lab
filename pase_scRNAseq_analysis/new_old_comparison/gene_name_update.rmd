@@ -1,0 +1,81 @@
+```{r}
+library(Seurat)
+library(dplyr)
+library(RColorBrewer)
+```
+
+```{r}
+# Initialization
+setwd("G:/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+# Specify name of RDS file containing Seurat Object for name update
+filename <- "GSE134571_Posterior48h_H9_Amnion_Merged.rds"
+input <- readRDS(filename)
+```
+
+```{r}
+# !!! TIME CONSUMING !!!
+# Create a new list of gene names from input object
+oldlist <- input@assays$RNA@counts@Dimnames[[1]]
+newlist <- UpdateSymbolList(oldlist)
+saveRDS(newlist, file = "backup.rds")
+```
+
+```{r}
+# Genes could be missing after symbol update
+# Probably due to long runtime and RAM volatility
+# thanks non-ECC RAM
+# Auto-correct for missing genes
+
+# Iterate through all genes
+for (testpoint in seq_len(length(oldlist))) {
+    # Check for 5 consecutive mismatch (possible drop)
+    if ((oldlist[testpoint] != newlist[testpoint])
+    & (oldlist[testpoint + 1] != newlist[testpoint + 1])
+    & (oldlist[testpoint + 2] != newlist[testpoint + 2])
+    & (oldlist[testpoint + 3] != newlist[testpoint + 3])
+    & (oldlist[testpoint + 4] != newlist[testpoint + 4])) {
+        # Verify drop site by crossreference with old list
+        if (UpdateSymbolList(symbol = oldlist[testpoint],
+        verbose = FALSE) !=
+        newlist[(testpoint)]) {
+            # Once confirmed, proceed to insert missing gene
+            dummy <- oldlist[1:(length(newlist) + 1)] # create a longer vector
+            # Genes are correct upon current point
+            dummy[1:(testpoint - 1)] <- newlist[1:(testpoint - 1)]
+            # Insert missing gene
+            dummy[testpoint] <- UpdateSymbolList(symbol = oldlist[testpoint])
+            # Shift remaining genes
+            dummy[- (1:testpoint)] <- newlist[- (1:(testpoint - 1))]
+            # Write back to new list
+            newlist <- dummy
+        }
+    }
+}
+
+# This part cannot check the last 5 genes due to condition limitation
+# Manual checking is advised
+```
+
+```{r}
+# Extract raw count matrix from input Seurat object
+mat <- matrix(data = input@assays$RNA@counts,
+ncol = input@assays$RNA@counts@Dim[2],
+nrow = input@assays$RNA@counts@Dim[1])
+# Update gene names
+colnames(mat) <- input@assays$RNA@counts@Dimnames[[2]]
+row.names(mat) <- newlist
+# Create new object
+updated_object <- CreateSeuratObject(counts = mat)
+# Standard preprocessing
+updated_object <- NormalizeData(updated_object)
+updated_object <- FindVariableFeatures(updated_object, selection.method = "vst",
+nfeatures = 2000)
+# Migrate original meta data
+# Due to gene update/merge, take it with a grain of salt
+updated_object@meta.data <- input@meta.data
+# Save new RDS, assuming input was .rds
+newfilename <- paste(substr(filename, 1, (nchar(filename) - 4)), "_updated",
+substr(filename, (nchar(filename) - 3), nchar(filename)), sep = "")
+saveRDS(updated_object, file = newfilename)
+```
+
