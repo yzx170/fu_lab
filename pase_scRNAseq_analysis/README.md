@@ -46,7 +46,8 @@ This comparison includes:
 Each dataset from the above manuscripts was individually processed to allow accurate comparison across the board. 
 
 ### Other scripts
-#### PGC Trajectory:
 
-#### 3D Trajectory: 
-#### Feature Plots: 
+#### 3D Trajectory
+Used to generate 3D diffusion map to visualize the trajectories of major lineages. 
+#### Feature Plots
+Because the vector plots of single cell UMAP is notoriously difficult to change once they are generated, I developed a script to adjust the plotting parameters prior to export to improve the figure aesthetics. 
