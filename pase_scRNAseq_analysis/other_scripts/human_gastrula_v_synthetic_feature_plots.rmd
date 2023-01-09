@@ -1,0 +1,118 @@
+```{r}
+library(Seurat)
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(RColorBrewer)
+```
+
+
+```{r}
+# Data Import
+current <- getwd()
+setwd("/Volumes/GoogleDrive-103146780896750040309/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+load("allsamples_humanGastrula_PCA_dims20_findneighbor_dim15_res0.57_CCS.Rd")
+setwd(current)
+```
+
+
+```{r}
+# Rename Data
+data <- allsamples_humanGastrula_PCA_dims20_findneighbor_dim15_res0.57
+
+# Seperate human v. synthetic
+data$original <- data$orig.ident
+
+df <- data$original
+
+df <- gsub("hESC_24h", "synthetic", df)
+
+df <- gsub("hESC_36h", "synthetic", df)
+
+df <- gsub("hESC_48h", "synthetic", df)
+
+data$original <- df
+```
+
+```{r}
+# All genes, plot generated to fp
+features <- c("NANOG", "SOX2", "POU5F1", "TBXT", "MIXL1", "MESP1", "EOMES",
+"GATA6", "APLNR", "LHX1", "PITX2", "PDGFRA", "FOXC1", "HEY1", "ISL1", "TFAP2A",
+"GATA3", "ANXA3", "TCIM", "GABRP", "SOX17", "TFAP2C", "NANOS3")
+fp <- FeaturePlot(data,
+features = features, split.by = "original")
+```
+
+```{r}
+# Test run with a few genes
+features <- c("NANOG", "SOX2", "POU5F1", "TBXT")
+fp <- FeaturePlot(data,
+features = features, split.by = "original")
+```
+
+```{r}
+# Plot modification
+# Remove title from first two subplots
+fp[[1]] <- fp[[1]] + labs(title = element_blank())
+fp[[2]] <- fp[[2]] + labs(title = element_blank())
+
+# Remove axis elements from all subplots
+fp <- fp & theme(axis.line.x = element_blank(), axis.line.y = element_blank(),
+axis.text.x = element_blank(), axis.text.y = element_blank(),
+axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+axis.title.x = element_blank(),
+axis.title.x.bottom = element_blank(),
+axis.title.x.top = element_blank(),
+axis.title.y.left = element_blank(),
+axis.title.y.right = element_blank())
+
+# Enable first plot axis title
+fp[[1]] <- fp[[1]] + xlab(label = "UMAP1") + ylab(label = "UMAP2")
+fp[[1]] <- fp[[1]] + theme(
+axis.title.x.bottom = element_text(size = 5, face = NULL),
+axis.title.y.left = element_text(size = 5, face = NULL))
+
+# Move gene label to in between plots
+for (i in seq(2, by = 2, 2 * length(features))) {
+fp[[i]] <- fp[[i]] + xlab(label = names(fp[[i]]$data[4])) # title does not work
+fp[[i]] <- fp[[i]] + theme(axis.title.x.bottom = element_text(
+hjust = unit(-0.2, "in"),
+vjust = unit(0.75, "in"), # adjust parameter once font size changes
+size = 5, face = "bold"))
+}
+
+# Change dot size and stroke in mm
+for (i in 1:(2 * length(features))) {
+fp[[i]]$layers[[1]]$aes_params$size <- 0.2
+fp[[i]]$layers[[1]]$aes_params$stroke <- 0
+}
+
+# Rearrange feature plots into row by column, specify subplot size
+fp <- fp + plot_layout(nrow = 8, ncol = 6,
+widths = unit(.75, "in"), heights = unit(.5, "in"))
+
+# Make entire plot more compact
+fp <- fp & theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+# Add space between genes
+for (i in seq(2, by = 2, 2 * length(features))) {
+fp[[i]] <- fp[[i]] + theme(plot.margin = unit(c(0, 30, 0, 0), "pt"))
+}
+
+# Remove space near page margin
+for (i in seq(6, by = 6, 2 * length(features))) {
+fp[[i]] <- fp[[i]] + theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+}
+
+fp # preview
+```
+
+```{r} 
+# Plot Export, size in inches
+pdf(file = "feature_plot.pdf", width = 7, height = 9)
+fp
+dev.off()
+```
+
+
