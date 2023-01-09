@@ -8,6 +8,9 @@ R
 ### Publication
 https://doi.org/10.1016/j.stem.2022.08.009
 
+### Data Availability
+All data used in this repository is available upon request. 
+
 
 ## Scripts
 
@@ -24,7 +27,23 @@ We used [CellChat](http://www.cellchat.org/) package to analyze the ligand-recep
 We used [SCENIC](https://scenic.aertslab.org/) package to analyze the gene regulatory network within our model. 
 
 ### Trophoblast Validation
+In this section, we did a comparative transcriptomic study among major trophoblast and amnionic ectoderm models available by the time we prepare the manuscript and came up with a stringent criteria to distinguish human trophoblast and amnion. 
 
+This comparison includes: 
+1. Human trophoblast (Blakeley et al., 2015; Petropoulos et al., 2016), 
+2. Human amnion (Tyser et al., 2021), 
+3. Zheng Transwell (Zheng et al., 2019b), 
+4. Gao C5, Gao H1, Gao FH1 (Gao et al., 2019), 
+5. Minn (Minn et al., 2020), 
+6. Liu (Liu et al., 2021), 
+7. Yu (Yu et al., 2021), 
+8. Guo H9, Guo hNES1 (Guo et al., 2021), 
+9. Io (Io et al., 2021), 
+10. Yanagida (Yanagida et al., 2021), 
+11. Dong H9, Dong WIBR3, Dong AN (Dong et al., 2020), 
+12. Rostovskaya EarlyAME, and Rostovskaya LateAME (Rostovskaya et al., 2022).
+
+Each dataset from the above manuscripts was individually processed to allow accurate comparison across the board. 
 
 ### Other scripts
 #### PGC Trajectory:
