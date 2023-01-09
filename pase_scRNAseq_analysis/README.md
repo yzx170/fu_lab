@@ -12,12 +12,16 @@ https://doi.org/10.1016/j.stem.2022.08.009
 ## Scripts
 
 ### Integration Analysis
+In this script, we performed integration analysis among downsampled PASE, [CS7 human gastrula](https://doi.org/10.1038/s41586-021-04158-y), human E9E11 gastruloid and pre-implantation data. 
 
 ### New Old Comparison
+We compared the transcriptomic data of PASE between our latest sequencing results and our previous results to validate the consistency of our model. 
 
 ### Cell Chat
+We used [CellChat](http://www.cellchat.org/) package to analyze the ligand-receptor interactions within our model. 
 
 ### SCENIC
+We used [SCENIC](https://scenic.aertslab.org/) package to analyze the gene regulatory network within our model. 
 
 ### Trophoblast Validation
 
