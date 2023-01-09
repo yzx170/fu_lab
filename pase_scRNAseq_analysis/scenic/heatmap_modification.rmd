@@ -1,0 +1,94 @@
+```{r}
+# Necessary libraries
+library(Seurat)
+library(SCENIC)
+library(ComplexHeatmap)
+library(AUCell)
+library(shiny)
+library(rbokeh)
+library(doMC)
+library(seriation)
+```
+
+```{r}
+# Load data
+current <- getwd()
+setwd("G:/My Drive/Projects/Yi's scRNA Data/SCENIC/Data")
+load("allsamples_PCA_cluster_dims20_res0.5.Rd")
+dataset <- allsamples_PCA_cluster_dims20_res0.5
+expr <- GetAssayData(object = dataset, assay = "RNA", slot = "count")
+exprmat <- as(Class = "matrix", object = expr)
+exprmat_log <- log2(exprmat + 1)
+scenic_options <- readRDS("int/scenicOptions.Rds")
+aucellapp <- plotTsne_AUCellApp(scenic_options, exprmat_log)
+cellinfo <- readRDS("int/cellInfo.Rds")
+regulonauc <- loadInt(scenic_options, "aucell_regulonAUC")
+binary_regulon_activity <- loadInt(scenic_options, "aucell_binary_nonDupl")
+setwd(current)
+```
+
+```{r} 
+# Generate Heatmaps
+regulon_bycelltype <- sapply(split(rownames(cellinfo),
+cellinfo$CellType), function(cells) rowMeans(getAUC(regulonauc)[, cells]))
+regulon_bycelltype_scaled <-
+t(scale(t(regulon_bycelltype), center = T, scale = T))
+regulon_bycelltype_scaled_noex <-
+regulon_bycelltype_scaled[!grepl("_extended",
+rownames(regulon_bycelltype_scaled)), ]
+# No Extended, re-order rows and columns
+o <- seriate(dist(regulon_bycelltype_scaled_noex), method = "GW")
+plot2 <- ComplexHeatmap::Heatmap(regulon_bycelltype_scaled_noex,
+row_order = get_order(o),
+column_order = c("ESC", "PSLCs", "MeLC1", "MeLC2", "NasAMLC",
+"AMLC1", "AMLC2", "PGCLCs"),
+name = "Regulon activity", row_names_gp = gpar(fontsize = 5))
+# Output pdf files
+pdf(file = "regulonActivity_byCellType_Scaled_noExtended_heatmap.pdf",
+width = 10, height = 20)
+plot2
+dev.off()
+```
+
+```{r}
+# Generate Feature Plot
+# Expression mapping and output
+pdf(file = "regulonActivity_feature_plot.pdf", width = 3.5, height = 1.8)
+par(mfrow = c(2, 4), mar = c(1, 1, 1, 1))
+# use UMAP instead of TSNE
+AUCell::AUCell_plotTSNE(dataset@reductions$umap@cell.embeddings,
+exprmat, # this plotting function has embedded normalization
+regulonauc[c("SOX2 (284g)", "ISL1 (188g)", "GATA3 (34g)", "EOMES (51g)",
+"TBX6 (28g)", "GATA4 (212g)", "SOX17 (315g)", "NANOG (126g)")
+],
+borderColor = adjustcolor("black", alpha.f = 0),
+plots = "AUC", cex = 0.2)
+dev.off()
+```
+
+
+```{r}
+# Test feature plot modification
+par(mfrow = c(2, 4), mar = c(1, 1, 1, 1))
+# use UMAP instead of TSNE
+AUCell::AUCell_plotTSNE(dataset@reductions$umap@cell.embeddings,
+exprmat, # this plotting function has embedded normalization
+regulonauc[c("SOX2 (284g)", "ISL1 (188g)", "GATA3 (34g)", "EOMES (51g)",
+"TBX6 (28g)", "GATA4 (212g)", "SOX17 (315g)", "NANOG (126g)")
+],
+borderColor = adjustcolor("black", alpha.f = 0.1),
+plots = "AUC", cex = 0.5)
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+```
