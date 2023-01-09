@@ -1,4 +1,4 @@
-# Neural Tube
+# Microfluidic-based Neural Tube Model
 
 ## Project Overview
 We have developed a microfluidic-based neural tube-like structure (NTLS) that recapitulates the rostrocaudal and dorsoventral patterning of human central nervous system from brain to spinal cord. This repository hosts the scripts used in the data analysis of the project. 
