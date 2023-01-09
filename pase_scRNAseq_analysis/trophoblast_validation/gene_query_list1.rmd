@@ -1,0 +1,664 @@
+```{r}
+library(Seurat)
+library(ggplot2)
+library(reshape2)
+library(readxl)
+library(factoextra)
+library(vegan)
+```
+
+```{r}
+genelist <- read_excel("TE AM gene list.xlsx", )
+```
+
+```{r}
+genes_to_query <- as.vector(na.omit(as.matrix(genelist[8])))
+current <- getwd()
+```
+
+```{r}
+if (Sys.info()["sysname"] == "Windows") {
+google_drive <- "G:"
+} else if (Sys.info()["sysname"] == "Darwin") {
+google_drive <-
+"/Users/robinyan/Library/CloudStorage/GoogleDrive-robinyzx@umich.edu"
+}
+
+"Liu"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Liu")
+setwd(data_dir)
+trophectoderm <- readRDS("Liu_final.rds")
+# Document and remove genes not present
+to_remove_liu <- genes_to_query[!(genes_to_query %in% rownames(trophectoderm))]
+genes_liu <- genes_to_query[(genes_to_query %in% rownames(trophectoderm))]
+# Query
+liu <- rowMeans(trophectoderm[genes_liu, ])
+# Formatting
+liu <- t(data.frame(liu))
+row.names(liu) <- "Liu"
+# Readd omitted genes
+for (gene in to_remove_liu) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    liu <- cbind(liu, newcol)
+}
+
+"Yu"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Yu")
+setwd(data_dir)
+data <- readRDS("Yu_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+yu <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+yu <- yu[-c(1), ] # remove row of gene names
+row.names(yu) <- paste("Yu", rownames(yu), sup = "") # source
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    yu <- cbind(yu, newcol)
+}
+# Fix repeated gene name issue
+if ("RGS5" %in% genes_to_query) {
+    yu[, "RGS5"] <- colSums(data.frame(yu[, "RGS5"]))
+}
+# Replace NA with zeros
+yu[is.na(yu)] <- 0
+# Average all data points
+yu <- t(data.frame(colMeans(data.matrix(data.frame(yu,
+check.names = FALSE)))))
+rownames(yu) <- "Yu"
+
+"Gao"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Gao")
+setwd(data_dir)
+data <- readRDS("Gao_final.rds")
+# Document and remove genes not present
+to_remove <-
+genes_to_query[!(genes_to_query %in% data$Name)]
+to_use <-
+genes_to_query[(genes_to_query %in% data$Name)]
+# Query
+query_return <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = Name == x)
+})
+# Formatting
+formated <- query_return[-c(1), ] # remove row of gene names
+row.names(formated) <- paste("Gao", rownames(formated), sup = "") # source
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    formated <- cbind(formated, newcol)
+}
+gao <- formated
+# Average day 12 data points
+gao_fh1 <- t(data.frame(colMeans(data.matrix(data.frame(gao[11:12, ],
+check.names = FALSE)))))
+rownames(gao_fh1) <- "Gao FH1"
+gao_h1 <- t(data.frame(colMeans(data.matrix(data.frame(gao[23:24, ],
+check.names = FALSE)))))
+rownames(gao_h1) <- "Gao H1"
+gao_c5 <- t(data.frame(colMeans(data.matrix(data.frame(gao[35:36, ],
+check.names = FALSE)))))
+rownames(gao_c5) <- "Gao C5"
+gao <- rbind(gao_fh1, gao_c5, gao_h1)
+
+"Io"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Io")
+setwd(data_dir)
+data <- readRDS("Io_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene)]
+# Query
+io <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene == x)
+})
+# Formatting
+io <- io[-c(7, 8), ]
+row.names(io) <- paste("Io", rownames(io), sup = "")
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    io <- cbind(io, newcol)
+}
+# Fix repeated gene name issue
+if ("RGS5" %in% genes_to_query) {
+    io[, "RGS5"] <- colSums(data.frame(io[, "RGS5"]))
+}
+# Average day 12 data points
+io <- t(data.frame(colMeans(data.matrix(data.frame(io[5:6, ],
+check.names = FALSE)))))
+rownames(io) <- "Io"
+
+"Guo"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Guo")
+setwd(data_dir)
+data <- readRDS("Guo_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+guo <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+guo <- guo[-c(17, 18), ]
+row.names(guo) <- paste("Guo", rownames(guo), sup = "")
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    guo <- cbind(guo, newcol)
+}
+# Fix repeated gene name issue
+if ("RGS5" %in% genes_to_query) {
+    guo[, "RGS5"] <- colSums(data.frame(guo[, "RGS5"]))
+}
+# Average day 5 data points
+guo_hnes1 <- t(data.frame(colMeans(data.matrix(data.frame(guo[7:8, ],
+check.names = FALSE)))))
+rownames(guo_hnes1) <- "Guo hNES1"
+guo_h9 <- t(data.frame(colMeans(data.matrix(data.frame(guo[15:16, ],
+check.names = FALSE)))))
+rownames(guo_h9) <- "Guo H9"
+guo <- rbind(guo_h9, guo_hnes1)
+
+"Minn"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Minn")
+setwd(data_dir)
+batches <- readRDS("Minn_final.rds")
+# Document and remove genes not present
+to_remove_minn <- genes_to_query[!(genes_to_query %in% rownames(batches[[1]]))]
+genes_minn <- genes_to_query[(genes_to_query %in% rownames(batches[[1]]))]
+# Query
+minn <- lapply(X = batches, FUN = function(x) {
+    rowMeans(x[genes_minn, ])
+})
+# Formatting
+minn <- t(data.frame(minn))
+# Readd omitted genes
+for (gene in to_remove_minn) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    minn <- cbind(minn, newcol)
+}
+# Average two data points
+minn <- t(data.frame(colMeans(data.matrix(minn))))
+rownames(minn) <- "Minn"
+
+
+"Blakeley"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Blakeley")
+setwd(data_dir)
+data <- readRDS("Blakeley_final.rds")
+# Document and remove genes not present
+to_remove_blakeley <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+genes_blakeley <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+blakeley <- sapply(X = genes_blakeley, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+blakeley <- blakeley[-c(1, 2), ]
+blakeley <- data.frame(blakeley, check.names = FALSE)
+blakeley <- blakeley[-2, ]
+row.names(blakeley) <- "Blakeley"
+# Readd omitted genes
+for (gene in to_remove_blakeley) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    blakeley <- cbind(blakeley, newcol)
+}
+
+"Petropoulos"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Petropoulos")
+setwd(data_dir)
+trophectoderm <- readRDS("Petropoulos_final.rds")
+# Document and remove genes not present
+to_remove_petropoulos <-
+genes_to_query[!(genes_to_query %in% rownames(trophectoderm))]
+genes_petropoulos <-
+genes_to_query[(genes_to_query %in% rownames(trophectoderm))]
+# Query
+petropoulos <- rowMeans(trophectoderm[genes_petropoulos, ])
+# Formatting
+petropoulos <- t(data.frame(petropoulos))
+row.names(petropoulos) <- "Petropoulos"
+# Readd omitted genes
+for (gene in to_remove_petropoulos) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    petropoulos <- cbind(petropoulos, newcol)
+}
+
+"Yanagida"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Yanagida")
+setwd(data_dir)
+data <- readRDS("Yanagida_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+data <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+data <- data[-1, ]
+data <- data.frame(data, check.names = FALSE)
+row.names(data) <- "Yanagida"
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    data <- cbind(data, newcol)
+}
+yanagida <- data
+
+"Human gastrula"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Human Gastrula")
+setwd(data_dir)
+data <- readRDS("gastrula_final.rds")
+# Document and remove genes not present
+to_remove <-
+genes_to_query[!(genes_to_query %in% rownames(data))]
+to_use <-
+genes_to_query[(genes_to_query %in% rownames(data))]
+# Query
+query_return <- rowMeans(data[to_use, ])
+# Formatting
+formated <- t(data.frame(query_return))
+row.names(formated) <- "Human Amnion"
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    formated <- cbind(formated, newcol)
+}
+human_gastrula <- formated
+
+"Zheng"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/Data/Processed")
+setwd(data_dir)
+amnion_1 <- readRDS("Zheng_1_final.rds")
+amnion_2 <- readRDS("Zheng_2_final.rds")
+transwell <- readRDS("Zheng_final_transwell.rds")
+# Document and remove genes not present
+to_remove_zheng <- genes_to_query[!(genes_to_query %in% rownames(amnion_1))]
+genes_zheng <- genes_to_query[(genes_to_query %in% rownames(amnion_1))]
+# Query
+zheng_1 <- rowMeans(amnion_1[genes_zheng, ])
+# Formatting
+zheng_1 <- t(data.frame(zheng_1))
+row.names(zheng_1) <- "Zheng 1"
+# Readd omitted genes
+for (gene in to_remove_zheng) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    zheng_1 <- cbind(zheng_1, newcol)
+}
+# Query
+zheng_2 <- rowMeans(amnion_2[genes_zheng, ])
+# Formatting
+zheng_2 <- t(data.frame(zheng_2))
+row.names(zheng_2) <- "Zheng 2"
+# Readd omitted genes
+for (gene in to_remove_zheng) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    zheng_2 <- cbind(zheng_2, newcol)
+}
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% rownames(transwell))]
+to_use <- genes_to_query[(genes_to_query %in% rownames(transwell))]
+# Query
+zheng_transwell <- rowMeans(transwell[to_use, ])
+# Formatting
+zheng_transwell <- t(data.frame(zheng_transwell))
+row.names(zheng_transwell) <- "Zheng Transwell"
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    zheng_transwell <- cbind(zheng_transwell, newcol)
+}
+
+"Monkey"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Monkey")
+setwd(data_dir)
+monkey <- readRDS("Monkey_final.rds")
+# Document and remove genes not present
+to_remove_monkey <- genes_to_query[!(genes_to_query %in% rownames(monkey))]
+genes_monkey <- genes_to_query[(genes_to_query %in% rownames(monkey))]
+# Query
+monkey <- rowMeans(monkey[genes_monkey, ])
+# Formatting
+monkey <- t(data.frame(monkey))
+row.names(monkey) <- "Monkey"
+# Readd omitted genes
+for (gene in to_remove_monkey) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    monkey <- cbind(monkey, newcol)
+}
+
+"Rostovskaya"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Rostovskaya")
+setwd(data_dir)
+data <- readRDS("Rostovskaya_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+rostovskaya <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+rostovskaya <- rostovskaya[-1, ]
+row.names(rostovskaya) <- paste("Rostovskaya", rownames(rostovskaya), sup = "")
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    rostovskaya <- cbind(rostovskaya, newcol)
+}
+# Fix repeated gene name issue
+if ("RGS5" %in% genes_to_query) {
+    rostovskaya[, "RGS5"] <- colSums(data.frame(rostovskaya[, "RGS5"]))
+}
+if ("CD99" %in% genes_to_query) {
+    rostovskaya[, "CD99"] <- colSums(data.frame(rostovskaya[, "CD99"]))
+}
+# Convert to matrix
+rostovskaya <- data.matrix(rostovskaya)
+# Select only day 5
+rostovskaya_day5 <- data.matrix(t(rostovskaya[3, ]))
+row.names(rostovskaya_day5) <- "Rostovskaya hALEC.Day.5"
+
+"Dong"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Dong")
+setwd(data_dir)
+data <- readRDS("Dong_final.rds")
+# Document and remove genes not present
+to_remove <- genes_to_query[!(genes_to_query %in% data$gene_name)]
+to_use <- genes_to_query[(genes_to_query %in% data$gene_name)]
+# Query
+dong <- sapply(X = to_use, FUN = function(x) {
+    subset(data, subset = gene_name == x)
+})
+# Formatting
+dong <- dong[-1, ]
+row.names(dong) <- paste("Dong", rownames(dong), sup = "")
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    dong <- cbind(dong, newcol)
+}
+# Fix repeated gene name issue
+if ("RGS5" %in% genes_to_query) {
+    dong[, "RGS5"] <- colSums(data.frame(dong[, "RGS5"]))
+}
+# Convert to matrix
+dong <- data.matrix(dong)
+# Separate data into types
+dong_stb <- dong[c(2, 5), ]
+dong_primed <- dong[c(4, 7), ]
+dong_naive <- dong[c(6, 1, 3), ]
+
+"Rostovskaya late amnion and STB"
+# Data Import
+data_dir <- file.path(google_drive,
+"/My Drive/Projects/Yi's scRNA Data/External Papers/Rostovskaya",
+"GSE179309_RAW", "AP8")
+setwd(data_dir)
+data <- readRDS("rostovskaya_ap8.rds")
+# Document and remove genes not present
+to_remove <-
+genes_to_query[!(genes_to_query %in% rownames(data))]
+to_use <-
+genes_to_query[(genes_to_query %in% rownames(data))]
+# Subset STB and AM
+data_stb <- subset(data, idents = "STB-like")
+data_late_am <- subset(data, idents = "AME-L-like")
+
+# Query STB
+query_return <- rowMeans(data_stb[to_use, ])
+# Formatting
+formated <- t(data.frame(query_return))
+row.names(formated) <- "Rostovskaya STB"
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    formated <- cbind(formated, newcol)
+}
+rostovskaya_stb <- formated
+
+# Query Late AM
+query_return <- rowMeans(data_late_am[to_use, ])
+# Formatting
+formated <- t(data.frame(query_return))
+row.names(formated) <- "Rostovskaya Late Amnion"
+# Readd omitted genes
+for (gene in to_remove) {
+    newcol <- data.frame(NA)
+    colnames(newcol) <- gene
+    formated <- cbind(formated, newcol)
+}
+rostovskaya_late_am <- formated
+
+setwd(current)
+```
+
+```{r}
+# Concatenate data frames
+# composite <- rbind(human_gastrula,
+# zheng_2, zheng_1, zheng_transwell,
+# gao, minn, dong_primed, dong_stb, dong_naive,
+# rostovskaya, rostovskaya_late_am,
+# rostovskaya_stb,
+# liu, yu, io, guo, yanagida,
+# blakeley, petropoulos)
+composite <- rbind(blakeley, petropoulos,
+yanagida, io, dong_naive, guo, yu, rostovskaya_day5,
+liu, gao, rostovskaya_late_am, minn, zheng_transwell,
+zheng_1, zheng_2, human_gastrula)
+composite <- composite[rev(seq_len(nrow(composite))), ] # reverse row name order
+composite <- data.matrix(composite)
+row.names(composite)[11] <- "Rostovskaya hALEC.Day.5"
+# Replace NA with zeros
+composite[is.na(composite)] <- 0
+# Average human trophoblast
+composite[nrow(composite) - 1, ] <-
+colMeans(composite[c(nrow(composite) - 1,
+nrow(composite)), ])
+rownames(composite)[nrow(composite) - 1] <-
+"Human Trophoblast"
+composite <- composite[-nrow(composite), ]
+```
+
+```{r}
+# Log
+composite <- log2(composite + 1)
+```
+
+```{r}
+# Save current results as RDS
+saveRDS(composite, file = "composite_list_short.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Read saved .RDS
+composite <- readRDS("composite_list_short.rds")
+```
+
+```{r}
+# Heatmap Visualization
+melted <- melt(composite)
+heatmap <- ggplot(data = melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() + scale_fill_distiller(palette = "YlOrBr") +
+  coord_flip() + theme(axis.title.x = element_blank(),
+  axis.title.y = element_blank())
+```
+
+```{r}
+# Plot modification
+# Modify elements
+heatmap <- heatmap + theme(
+axis.ticks = element_line(size = 0.4),
+axis.line = element_line(size = 0.4),
+axis.text = element_text(size = 5, face = NULL),
+axis.text.x = element_text(angle = 90),
+legend.text = element_text(size = 5, face = NULL),
+legend.title = element_blank(),
+legend.key.width = unit(0.1, "in"))
+```
+
+```{r}
+pdf(file = "heatmap.pdf", width = 4, height = 3)
+heatmap
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# PCA based on all data
+all_pca <- prcomp(composite, scale = TRUE)
+# PCA VAF
+fviz_eig(all_pca)
+```
+
+```{r}
+# PCA visualization
+fviz_pca_ind(all_pca,
+             col.ind = "cos2", # Color by the quality of representation
+             axes = c(1, 2),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+
+```{r}
+# 1D linestack
+linestack(all_pca$x[, 1])
+```
+
+
+
+
+
+```{r}
+# PCA based on human data
+# Split data into human and organoid
+composite_human <- composite[13:15, ]
+composite_organoid <- composite[- (13:15), ]
+# PCA on human data
+human_pca <- prcomp(composite_human, scale = TRUE)
+# PCA VAF
+fviz_eig(human_pca)
+```
+
+```{r}
+# PCA basis visualization
+fviz_pca_ind(human_pca,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+
+```{r}
+# Project organoid onto human data
+organoid_pca <- predict(human_pca, newdata = composite_organoid)
+organoid_pca
+# Plot human data
+p <- fviz_pca_ind(human_pca, repel = TRUE)
+# Add organoid data
+fviz_add(p, organoid_pca, color = "blue")
+```
+
+```{r}
+```
