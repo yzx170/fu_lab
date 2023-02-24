@@ -3,6 +3,8 @@
 ## Project Overview
 We have developed a microfluidic-based neural tube-like structure (NTLS) that recapitulates the rostrocaudal and dorsoventral patterning of human central nervous system from brain to spinal cord. This repository hosts the scripts used in the data analysis of the project. 
 
+Major results to date are summarized in this [slide deck](https://github.com/yzx170/fu_lab/blob/main/neural_tube/Neural%20Tube.pdf). 
+
 ### Platform: 
 Matlab
 ### Publication
