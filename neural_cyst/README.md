@@ -2,7 +2,9 @@
 # Rostrocaudal Patterning of Neural Cyst Array
 
 ## Project Overview
-This work-in-progress project aims at performing rostrocaudal patterning on neural cyst-like tissue array. 
+This project aims at performing rostrocaudal patterning on neural cyst-like tissue array. 
+
+Major results to date are summarized in this [slide deck](https://github.com/yzx170/fu_lab/blob/main/neural_cyst/Neural%20Cyst.pdf). 
 
 ### Platform:
 Python 
